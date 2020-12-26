@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+// A function to multiply a vector by a constant
 void MultiplyVectorByScalar(std::vector<int>& v, int k) {
   for (auto& entry : v) {
     entry *= k;
