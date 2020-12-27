@@ -4,7 +4,44 @@
 #include <iostream>
 #include <vector>
 
-// A function to multiply a vector by a constant
+/*
+ INSTRUCTIONS
+ ------------
+ Construct a Matrix A. Given this matrix, find all the given parameters needed
+ for the add function (see comment under the function). For the altered matrix,
+ call it A', run the add function with said parameters. Then run the same
+ add function, except with Identity(K,A.size()), where K is a dummy matrix. (For
+ reference, the 'matrices' we are using are essentially a vector of a vector)
+ Assign that to some matrix I (keep this as your identity). Then you're done
+ with a row operation! The last step is to check if the matrix is identity(i.e.
+ the process is done). To do this, simply call the TestIfIdentity function on A'
+
+ */
+
+bool TestIfIdentity(std::vector<std::vector<int>> I) {
+  int counter = 0;
+  for (int iterator = 0; iterator < I.size(); iterator++) {
+    std::vector<int> Dummy = I[iterator];
+    for (int iterator2 = 0; iterator2 < Dummy.size(); iterator2++) {
+      if (iterator = iterator2) {
+        if (Dummy[iterator2] == 1) {
+          counter++;
+        }
+      } else {
+        if (Dummy[iterator2] == 0) {
+          counter++;
+        }
+      }
+    }
+  }
+  int desired = I.size() * I.size();
+  if (counter == desired) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void MultiplyVectorByScalar(std::vector<int>& v, int k) {
   for (auto& entry : v) {
     entry *= k;
@@ -61,4 +98,7 @@ int main() {
   for (auto& entry : Bfinal) {
     std::cout << entry[0] << " " << entry[1] << " " << entry[2] << std::endl;
   }
+  bool yesno = TestIfIdentity(B);
+  std::cout << yesno << std::endl;
+  // Everything in the main section is testing the program on a random scenario.
 }
