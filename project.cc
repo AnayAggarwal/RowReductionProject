@@ -13,10 +13,65 @@
  add function, except with Identity(K,A.size()), where K is a dummy matrix. (For
  reference, the 'matrices' we are using are essentially a vector of a vector)
  Assign that to some matrix I (keep this as your identity). Then you're done
- with a row operation! The last step is to check if the matrix is identity(i.e.
- the process is done). To do this, simply call the TestIfIdentity function on A'
-
+ with a row operation!
  */
+
+int counter = 9;                      // For 2x2 it's 9 moves at max
+std::vector<std::vector<int>> Moves;  // Vector of moves
+
+std::vector<std::vector<int>> generateDataset(
+    std::vector<std::vector<int>> Dummy) {
+  // Dummy is 2x2 --> It needs 9 moves at max. Time complexity is
+  // not of the essence here, since we just want to generate the dataset.
+  int maximum = 0;
+  int minimum = 1000000;
+  // Finding minimum and maximum values to determine the range (so it won't run
+  // forever)
+  for (auto& entry : Dummy) {
+    for (auto& entry2 : entry) {
+      if (minimum > entry2) {
+        minimum = entry2;
+      }
+      if (maximum < entry2) {
+        maximum = entry2;
+      }
+    }
+  }
+  int range = maximum / minimum;
+  recursionfordataset(range, Dummy);
+  return Moves;
+}
+// x and y are the essential coefficients. The rest is looping through Dummy. We
+// are using a recursion (calling the function inside itself) with a break
+// condition.
+void recursionfordataset(int range, std::vector<std::vector<int>> Dummy) {
+  if (counter != 0) {
+    for (int x = -range; x <= range; x++) {
+      for (int y = -range; y <= range; y++) {
+        for (int i = 0; i < 2; i++) {
+          for (int j = 0; j < 2; j++) {
+            if (i != j) {
+              Dummy = add(Dummy[i], Dummy[j], Dummy, i, x, y);
+              std::vector<int> move = {x, y};
+              Moves.push_back(move);
+              counter -= 1;
+              recursionfordataset(range, Dummy);
+            }
+          }
+        }
+      }
+    }
+  } else {
+    bool yesno = TestIfIdentity(Dummy);
+    if (yesno == true) {
+      return;
+    } else {
+      Moves.clear();
+      counter = 9;
+      recursionfordataset(range, Dummy);
+    }
+  }
+}
 
 bool TestIfIdentity(std::vector<std::vector<int>> I) {
   int counter = 0;
@@ -98,7 +153,8 @@ int main() {
   for (auto& entry : Bfinal) {
     std::cout << entry[0] << " " << entry[1] << " " << entry[2] << std::endl;
   }
-  bool yesno = TestIfIdentity(B);
-  std::cout << yesno << std::endl;
+  bool value = TestIfIdentity(B);
+  bool value2 = TestIfIdentity(Bfinal);
+  std::cout << value << " " << value2 << std::endl;
   // Everything in the main section is testing the program on a random scenario.
 }
