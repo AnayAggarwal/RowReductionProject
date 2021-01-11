@@ -17,62 +17,47 @@
  with a row operation!
  */
 
-using Matrix_entry = std::pair<int, int>;
-using Matrix = std::vector<Matrix_entry>;
+using Matrix_entry = std::pair<int, int>;  // This is for 2x2 matrix
+using Matrix = std::vector<Matrix_entry>;  // This is for 2x2 matrix
 
-uint16_t counter = 9;  // For 2x2 it's 9 moves at max
-Matrix Moves;          // Vector of moves
+uint16_t counter = 9;  // For 2x2 it's 9 moves at max, with the MIT algorithm
+Matrix Moves;          // Vector of moves, used in recursion for dataset
 
 void MultiplyVectorByScalar(Matrix_entry& matrix_entry, int k) {
   matrix_entry.first *= k;
   matrix_entry.second *= k;
 }
 
-Matrix create_identity_matrix() {
+void create_identity_matrix(std::vector<std::vector<int>>& I, int n) {
   // Create n x n identity matrix
-  // XXX because we're initially working on a 2x2, set the
-  // diagnals to 1.
-  return {std::make_pair(1, 0), std::make_pair(0, 1)};
+  I = std::vector<std::vector<int>>(n, std::vector<int>(n, 0));
+  for (unsigned int t = 0; t < n; t++) {
+    I[t][t] = 1;
+  }
 }
 
-Matrix add(Matrix_entry& R1, Matrix_entry& R2, const Matrix& A, int index,
-           int x, int y) {
-  Matrix_entry A1, A2;
-  auto multiply_by_scalar = [](Matrix_entry& matrix_entry, int scalar) {
-    matrix_entry.first *= scalar;
-    matrix_entry.second *= scalar;
-  };
-
-  multiply_by_scalar(R1, x);
-  A1 = R1;
-  std::cout << "in add, A1: " << A1.first << " " << A1.second << "\n";
-  std::cout << "x = " << x << "\n";
-  multiply_by_scalar(R2, y);
-  A2 = R2;
-  std::cout << "in add, A2: " << A2.first << " " << A2.second << "\n";
-  std::cout << "y = " << y << "\n";
-
-  A1.first += A2.first;
-  A1.second += A2.second;
-  std::cout << "in add, A1: " << A1.first << " " << A1.second << "\n";
-
-  Matrix return_matrix{A};
-  std::cout << "in add, before erase, index: " << index << "\n";
-  return_matrix.erase(return_matrix.begin() + index);
-  std::cout << "in add, after erase\n";
-  return_matrix.insert(return_matrix.begin() + index, A1);
-  std::cout << "in add, after insert. return_matrix size: "
-            << return_matrix.size() << "\n";
-  for (auto& entry : return_matrix) {
-    std::cout << entry.first << " " << entry.second << "\n";
+std::vector<std::vector<int>> add(std::vector<int> R1, std::vector<int> R2,
+                                  std::vector<std::vector<int>> A, int index,
+                                  int x, int y) {
+  std::vector<int> A1, A2;
+  MultiplyVectorByScalar(R1, x);
+  std::copy(R1.begin(), R1.end(),
+            std::back_inserter(A1));  // Copying R1*x into A1
+  MultiplyVectorByScalar(R2, y);
+  std::copy(
+      R2.begin(), R2.end(),
+      std::back_inserter(
+          A2));  // Copying R2*y into A2 (this can be optimized, of course)
+  for (size_t i = 0; i < A1.size(); i++) {
+    A1[i] += A2[i];  // Adding A1 and A2
   }
-  return return_matrix;
+  A.erase(A.begin() + index - 1);       // Taking away old A1
+  A.insert(A.begin() + index - 1, A1);  // Adding new A1
+  return A;
 }
 
 bool test_if_identity(Matrix& input) {
-  // input_(row, column) if row = column then we need input_(row,column)=1.
-  // Otherwise, input_(row,column)=0.
-  // assert that the input matrix is always 2x2
+  // Simply testing if it is {{1,0}, {0,1}} (2x2 specifically)
   assert(input.size() == 2);
   if (input[0] == std::make_pair(1, 0) && input[1] == std::make_pair(0, 1)) {
     return true;
@@ -81,6 +66,7 @@ bool test_if_identity(Matrix& input) {
 }
 
 bool TestIfIdentity(std::vector<std::vector<int>> I) {
+  // Testing if all A_(i,i)=1, and A(i,j)=0 with i=/=j for the general case
   uint32_t identity_counter = 0;
   for (int iterator = 0; iterator < I.size(); iterator++) {
     std::vector<int> Dummy = I[iterator];
@@ -149,42 +135,39 @@ void recursionfordataset(int range, Matrix& Dummy) {
   }
 }
 
-#if 0
-std::vector<std::vector<int>> generateDataset(
-    std::vector<std::vector<int>> Dummy) {
-  // Dummy is 2x2 --> It needs 9 moves at max. Time complexity is
-  // not of the essence here, since we just want to generate the dataset.
-  int maximum = 0;
-  int minimum = 1000000;
-  // Finding minimum and maximum values to determine the range (so it won't run
-  // forever)
-  for (auto& entry : Dummy) {
-    for (auto& entry2 : entry) {
-      if (minimum > entry2) {
-        minimum = entry2;
-      }
-      if (maximum < entry2) {
-        maximum = entry2;
-      }
-    }
-  }
-  int range = maximum / minimum;
-  recursionfordataset(range, Dummy);
-  return Moves;
-}
-#endif
-
 // x and y are the essential coefficients. The rest is looping through Dummy. We
 // are using a recursion (calling the function inside itself) with a break
 // condition.
-/*
- Here is how we do the add function. It takes multiple parameters. The first is
- the first row it uses, the second is the second row it uses. The first row is
- the one that we will affect. Next is the major matrix that we are doing work
- on. Then, we have the index of the first row in the matrix. Eg. in 12,34 the
- index of 34 is 2. Finally, we have the multiplicative constants x,y. We are
- affecting R1 with R1*x+R2*y.
-   */
+
+std::vector<std::vector<int>> generatelooserdataset(
+    std::vector<std::vector<int>> Dummy) {
+  // This uses my conjecture, now proven
+  std::vector<std::vector<int>> I;
+  std::vector<std::vector<int>> Moves;
+  create_identity_matrix(I, Dummy.size());
+  for (int row = 0; row < n; row++) {
+    for (int column = 0; column < n; column++) {
+      if (row < column) {
+        I = add(I[row], I[row + 1], 1,
+                -Dummy[row][column] / Dummy[row + 1][column]);
+        Moves.push_back(
+            {row, row + 1, 1, -Dummy[row][column] / Dummy[row + 1][column]});
+      }
+      if (row == column) {
+        I = add(I[row], I[row + 1], 1 / Dummy[row][column], 0);
+        Moves.push_back({row, row + 1, 1 / Dummy[row][column], 0});
+      }
+      if (row > column) {
+        I = add(I[row], I[column], 1, -Dummy[row][column]);
+        Moves.push_back({row, column, 1, -Dummy[row][column]});
+      }
+    }
+  }
+  // I is now the inverse of dummy
+  // Moves is filled with entries of the form {row1, row2, constant1,
+  // constant2}, which we will use to train our model!
+  return I, Moves;
+}
 
 int main() {
   Matrix A;
@@ -208,9 +191,7 @@ int main() {
   std::cout << value << " " << value2 << std::endl;
 
   // Everything in the main section is testing the program on a random scenario.
-  Matrix Dummy = {std::make_pair(1, 2), std::make_pair(3, 4)};
-  recursionfordataset(5, Dummy);
-  for (const auto& [x, y] : Moves) {
-    std::cout << x << " " << y << std::endl;
-  }
+  std::vector<std::vector<int>> Dummy = {{1, 2}, {3, 4}};
+  // recursionfordataset(5, Dummy); Removed because it is too bashy
+  // Call new function on this
 }
