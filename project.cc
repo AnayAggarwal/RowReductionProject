@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <vector>
@@ -23,9 +24,10 @@ using Matrix = std::vector<Matrix_entry>;  // This is for 2x2 matrix
 uint16_t counter = 9;  // For 2x2 it's 9 moves at max, with the MIT algorithm
 Matrix Moves;          // Vector of moves, used in recursion for dataset
 
-void MultiplyVectorByScalar(Matrix_entry& matrix_entry, int k) {
-  matrix_entry.first *= k;
-  matrix_entry.second *= k;
+void MultiplyVectorByScalar(std::vector<int>& entry, int k) {
+  for (int i = 0; i < entry.size(); i++) {
+    entry[i] *= k;
+  }
 }
 
 void create_identity_matrix(std::vector<std::vector<int>>& I, int n) {
@@ -39,20 +41,13 @@ void create_identity_matrix(std::vector<std::vector<int>>& I, int n) {
 std::vector<std::vector<int>> add(std::vector<int> R1, std::vector<int> R2,
                                   std::vector<std::vector<int>> A, int index,
                                   int x, int y) {
-  std::vector<int> A1, A2;
   MultiplyVectorByScalar(R1, x);
-  std::copy(R1.begin(), R1.end(),
-            std::back_inserter(A1));  // Copying R1*x into A1
   MultiplyVectorByScalar(R2, y);
-  std::copy(
-      R2.begin(), R2.end(),
-      std::back_inserter(
-          A2));  // Copying R2*y into A2 (this can be optimized, of course)
-  for (size_t i = 0; i < A1.size(); i++) {
-    A1[i] += A2[i];  // Adding A1 and A2
+  for (size_t i = 0; i < R1.size(); i++) {
+    R1[i] += R2[i];  // Adding R1 and R2
   }
-  A.erase(A.begin() + index - 1);       // Taking away old A1
-  A.insert(A.begin() + index - 1, A1);  // Adding new A1
+  A.erase(A.begin() + index);       // Taking away old R1
+  A.insert(A.begin() + index, R1);  // Adding new R1
   return A;
 }
 
@@ -116,7 +111,8 @@ void recursionfordataset(int range, Matrix& Dummy) {
           if (i != j) {
             std::cout << "i: " << i << ",j: " << j << " range: " << range
                       << "\n";
-            Dummy = add(Dummy[i], Dummy[j], Dummy, i, x, y);
+            // Dummy = add(Dummy[i], Dummy[j], Dummy, i, x, y); (removed because
+            // it is bashing)
             std::cout << "before push_back\n";
             Moves.push_back(std::make_pair(x, y));
             --counter;
@@ -124,7 +120,8 @@ void recursionfordataset(int range, Matrix& Dummy) {
             recursionfordataset(range, Dummy);
             if (x != 0 && y != 0) {
               std::cout << "x, y are non-zero, calling add again\n";
-              add(Dummy[i], Dummy[j], Dummy, i, 1 / x, 1 / y);
+              // add(Dummy[i], Dummy[j], Dummy, i, 1 / x, 1 / y); (removed
+              // because it is bashing)
             }
             std::cout << "recursing again a second time\n";
             recursionfordataset(range, Dummy);
@@ -139,59 +136,88 @@ void recursionfordataset(int range, Matrix& Dummy) {
 // are using a recursion (calling the function inside itself) with a break
 // condition.
 
-std::vector<std::vector<int>> generatelooserdataset(
-    std::vector<std::vector<int>> Dummy) {
+void generatelooserdataset(std::vector<std::vector<int>> NewDummy) {
   // This uses my conjecture, now proven
   std::vector<std::vector<int>> I;
-  std::vector<std::vector<int>> Moves;
-  create_identity_matrix(I, Dummy.size());
-  for (int row = 0; row < n; row++) {
-    for (int column = 0; column < n; column++) {
+  std::vector<std::vector<int>> Moves2;
+  create_identity_matrix(I, NewDummy.size());
+  for (int row = 0; row < NewDummy.size(); row++) {
+    for (int column = 0; column < NewDummy.size(); column++) {
       if (row < column) {
-        I = add(I[row], I[row + 1], 1,
-                -Dummy[row][column] / Dummy[row + 1][column]);
-        Moves.push_back(
-            {row, row + 1, 1, -Dummy[row][column] / Dummy[row + 1][column]});
+        if (NewDummy[row + 1][column] == 0) {
+          // No dividing by 0
+          NewDummy[row + 1][column] = 1;
+        }
+        // I = add(
+        //  I[row], I[row + 1], I, row, 1,
+        // float(-NewDummy[row][column]) / float(NewDummy[row + 1][column]));
+        // (we don't need the inverse for our dataset!)
+        Moves2.push_back(
+            {row, row + 1, 1,
+             float(-NewDummy[row][column]) / float(NewDummy[row + 1][column])});
       }
       if (row == column) {
-        I = add(I[row], I[row + 1], 1 / Dummy[row][column], 0);
-        Moves.push_back({row, row + 1, 1 / Dummy[row][column], 0});
+        if (NewDummy[row][column] == 0) {
+          // No dividing by 0
+          NewDummy[row][column] = 1;
+          std::cout << "In here!" << std::endl;
+        };
+        //        I = add(I[row], I[row + 1], I, row,
+        //             float(1) / float(NewDummy[row][column]), 0);
+        Moves2.push_back(
+            {row, row + 1, float(1) / float(NewDummy[row][column]), 0});
       }
       if (row > column) {
-        I = add(I[row], I[column], 1, -Dummy[row][column]);
-        Moves.push_back({row, column, 1, -Dummy[row][column]});
+        //  I = add(I[row], I[column], I, row, 1, -NewDummy[row][column]);
+        Moves2.push_back({row, column, 1, -NewDummy[row][column]});
       }
     }
   }
-  // I is now the inverse of dummy
   // Moves is filled with entries of the form {row1, row2, constant1,
   // constant2}, which we will use to train our model!
-  return I, Moves;
+  std::ofstream bufferfile;
+  bufferfile.open("dataset.txt");
+  for (auto& entry : NewDummy) {
+    for (int i = 0; i < entry.size(); i++) {
+      bufferfile << entry[i] << " ";
+    }
+    bufferfile << "\n";
+  }
+  bufferfile << "\n";
+  for (auto& entry : Moves2) {
+    for (int i = 0; i < entry.size(); i++) {
+      bufferfile << entry[i] << " ";
+    }
+    bufferfile << "\n";
+  }
+  bufferfile << "\n"
+             << "\n";
+  bufferfile.close();
 }
 
 int main() {
-  Matrix A;
-  A = {std::make_pair(1, 2), std::make_pair(3, 4)};
+  std::vector<std::vector<int>> A = {{1, 2}, {3, 4}};
 
-  Matrix B = add(A[1], A[0], A, 1, 2, 1);
-  for (const auto& [x, y] : B) {
-    std::cout << x << " " << y << std::endl;
+  std::vector<std::vector<int>> B = add(A[0], A[1], A, 0, 1, 1);
+  for (auto& entry : B) {
+    std::cout << entry[0] << " " << entry[1] << std::endl;
   }
 
-  // change number entry for A size
-  Matrix K = create_identity_matrix();
-  // Change 3 for A size
-  Matrix Bfinal = add(K[1], K[0], K, 1, 2, 1);
-  for (const auto& [x, y] : Bfinal) {
-    std::cout << x << " " << y << std::endl;
+  std::vector<std::vector<int>> K;
+  create_identity_matrix(K, 2);
+
+  std::vector<std::vector<int>> Bfinal = add(K[0], K[1], K, 0, 1, 1);
+  for (auto& entry : Bfinal) {
+    std::cout << entry[0] << " " << entry[1] << std::endl;
   }
 
-  bool value = test_if_identity(B);
-  bool value2 = test_if_identity(Bfinal);
+  bool value = TestIfIdentity(B);
+  bool value2 = TestIfIdentity(Bfinal);
   std::cout << value << " " << value2 << std::endl;
 
   // Everything in the main section is testing the program on a random scenario.
   std::vector<std::vector<int>> Dummy = {{1, 2}, {3, 4}};
   // recursionfordataset(5, Dummy); Removed because it is too bashy
   // Call new function on this
+  generatelooserdataset(Dummy);
 }
