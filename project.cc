@@ -234,7 +234,8 @@ int scoringalg(std::vector<std::vector<float>> Dummy) {
 int counter1 = 0;
 std::vector<float> scores;
 std::vector<std::vector<float>> record;
-int minimax(std::vector<std::vector<float>> Dummy, int min, int max) {
+std::vector<float> minimax(std::vector<std::vector<float>> Dummy, int min,
+                           int max) {
   // Picture a tree. Suppose Dummy's minimum element is a, maximum is b. The set
   // of constants we can use is {a,a+1,...,b,1/a,1/(a+1),...,1/b}. So there are
   // 2*(b-a+1) branches from each node of the tree. The tree ends once n^2
