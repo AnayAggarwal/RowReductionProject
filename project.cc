@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -193,8 +195,93 @@ void generatelooserdataset(std::vector<std::vector<int>> NewDummy) {
   bufferfile << "\n"
              << "\n";
   bufferfile.close();
+  for (auto& entry : NewDummy) {
+    for (int i = 0; i < entry.size(); i++) {
+      std::cout << entry[i] << " ";
+    }
+    std::cout << "\n";
+  }
+  std::cout << "\n";
+  for (auto& entry : Moves2) {
+    for (int i = 0; i < entry.size(); i++) {
+      std::cout << entry[i] << " ";
+    }
+    std::cout << "\n";
+  }
+  std::cout << "\n"
+            << "\n";
+  Moves2.clear();
 }
 
+int scoringalg(std::vector<std::vector<float>> Dummy) {
+  // We will score this matrix
+  int score = 0;
+  for (int i = 0; i < Dummy.size(); i++) {
+    for (int j = 0; j < Dummy.size(); j++) {
+      // Compare against the identity matrix
+      if (i == j) {
+        // should be 1
+        score += pow(Dummy[i][j] - 1, 2);
+      }
+      if (i != j) {
+        // should be 0
+        score += pow(Dummy[i][j], 2);
+      }
+    }
+  }
+  return score;
+}
+int counter1 = 0;
+std::vector<float> scores;
+std::vector<std::vector<float>> record;
+int minimax(std::vector<std::vector<float>> Dummy, int min, int max) {
+  // Picture a tree. Suppose Dummy's minimum element is a, maximum is b. The set
+  // of constants we can use is {a,a+1,...,b,1/a,1/(a+1),...,1/b}. So there are
+  // 2*(b-a+1) branches from each node of the tree. The tree ends once n^2
+  // levels have been completed (Dummy is n x n)
+  std::vector<float> Constants;
+  for (int i = min; i <= max; i++) {
+    Constants.push_back(float(i));
+    if (i != 0) {
+      Constants.push_back(float(1) / float(i));
+    }
+  }
+  Constants.push_back(float(0));
+  if (counter1 == pow(Dummy.size(), 2)) {
+    // Hit the end of a part on the tree
+    scores.push_back(scoringalg(Dummy));
+  }
+  // Number of total nodes: |Constants| for each level, n^2 levels, so
+  // |Constants|^(n^2), very large!
+  if (counter1 == pow(Constants.size(), pow(Dummy.size(), 2))) {
+    // Find minimum element, corresponding moves
+    // In the record, there are n^2 moves for each element in scores
+    int minimum_element = 1000;
+    for (int i = 0; i < scores.size(); i++) {
+      if (scores[i] < minimum_element) {
+        minimum_element = scores[i];
+      }
+    }
+    for (int i = 0; i < scores.size(); i++) {
+      if (scores[i] == minimum_element) {
+        return record[i];
+      }
+    }
+  }
+  for (auto& entry : Constants) {
+    for (auto& entry2 : Constants) {
+      for (int i = 0; i < Dummy.size(); i++) {
+        for (int j = 0; j < Dummy.size(); j++) {
+          Dummy = add(Dummy[i], Dummy[j], Dummy, entry, entry2);
+          record.push_back({i, j, entry, entry2});
+          counter1++;
+          minimax(Dummy, min,
+                  max);  // Recursion here, counter is breaking point
+        }
+      }
+    }
+  }
+}
 int main() {
   std::vector<std::vector<int>> A = {{1, 2}, {3, 4}};
 
@@ -216,8 +303,16 @@ int main() {
   std::cout << value << " " << value2 << std::endl;
 
   // Everything in the main section is testing the program on a random scenario.
-  std::vector<std::vector<int>> Dummy = {{1, 2}, {3, 4}};
+
   // recursionfordataset(5, Dummy); Removed because it is too bashy
   // Call new function on this
-  generatelooserdataset(Dummy);
+  for (int a = 1; a < 10; a++) {
+    for (int b = 1; b < 10; b++) {
+      for (int c = 1; c < 10; c++) {
+        for (int d = 1; d < 10; d++) {
+          generatelooserdataset({{a, b}, {c, d}});
+        }
+      }
+    }
+  }
 }
