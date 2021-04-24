@@ -11,13 +11,10 @@
 /*
  INSTRUCTIONS
  ------------
- Construct a Matrix A. Given this matrix, find all the given parameters needed
- for the add function (see comment under the function). For the altered matrix,
- call it A', run the add function with said parameters. Then run the same
- add function, except with Identity(K,A.size()), where K is a dummy matrix. (For
- reference, the 'matrices' we are using are essentially a vector of a vector)
- Assign that to some matrix I (keep this as your identity). Then you're done
- with a row operation!
+ Construct a Matrix A via a vector of a vector. Run the "generatelooserdataset"
+ algorithm that will run the algorithmic pattern found by minimax. This will
+ compute the row operations required to invert the matrix. You can manually
+ throw these onto the matrix.
  */
 
 using Matrix_entry = std::pair<int, int>;  // This is for 2x2 matrix
@@ -28,7 +25,7 @@ Matrix Moves;          // Vector of moves, used in recursion for dataset
 
 void MultiplyVectorByScalar(std::vector<int>& entry, int k) {
   for (int i = 0; i < entry.size(); i++) {
-    entry[i] *= k;
+    entry[i] *= k;  // the intuitive method
   }
 }
 
@@ -36,7 +33,7 @@ void create_identity_matrix(std::vector<std::vector<int>>& I, int n) {
   // Create n x n identity matrix
   I = std::vector<std::vector<int>>(n, std::vector<int>(n, 0));
   for (unsigned int t = 0; t < n; t++) {
-    I[t][t] = 1;
+    I[t][t] = 1;  // switching all diagonal elements to 1
   }
 }
 
@@ -50,7 +47,7 @@ std::vector<std::vector<int>> add(std::vector<int> R1, std::vector<int> R2,
   }
   A.erase(A.begin() + index);       // Taking away old R1
   A.insert(A.begin() + index, R1);  // Adding new R1
-  return A;
+  return A;  // returning the matrix after a single row operation
 }
 
 bool test_if_identity(Matrix& input) {
@@ -60,6 +57,38 @@ bool test_if_identity(Matrix& input) {
     return true;
   }
   return false;
+}
+
+int determinant(int matrix[10][10], int n) {
+  int det = 0;  // simply expansion by minors
+  int submatrix[10][10];
+  if (n == 2)
+    return ((matrix[0][0] * matrix[1][1]) - (matrix[1][0] * matrix[0][1]));
+  else {
+    for (int x = 0; x < n; x++) {
+      int subi = 0;
+      for (int i = 1; i < n; i++) {
+        int subj = 0;
+        for (int j = 0; j < n; j++) {
+          if (j == x)
+            continue;
+          submatrix[subi][subj] = matrix[i][j];
+          subj++;
+        }
+        subi++;
+      }
+      det = det + (pow(-1, x) * matrix[0][x] * determinant(submatrix, n - 1));
+    }
+  }
+  return det;
+}
+// src:
+// https://www.tutorialspoint.com/cplusplus-program-to-compute-determinant-of-a-matrix
+
+bool isinvertible(int matrix[10][10], int n) {
+  return (determinant == 0)
+             ? true
+             : false;  // det = 0? if yes, its invertible, otherwise, it's not
 }
 
 bool TestIfIdentity(std::vector<std::vector<int>> I) {
@@ -87,7 +116,11 @@ bool TestIfIdentity(std::vector<std::vector<int>> I) {
   }
 }
 
-void recursionfordataset(int range, Matrix& Dummy) {
+void recursionfordataset(
+    int range,
+    Matrix& Dummy) {  // brute-force method to look down the game tree; this
+                      // will compute a small dataset for minimax to work with -
+                      // takes a while to go through
   if (counter == 0) {
     std::cout << "counter is zero\n";
     if (test_if_identity(Dummy) == true) {
@@ -153,7 +186,8 @@ void generatelooserdataset(std::vector<std::vector<int>> NewDummy) {
         // I = add(
         //  I[row], I[row + 1], I, row, 1,
         // float(-NewDummy[row][column]) / float(NewDummy[row + 1][column]));
-        // (we don't need the inverse for our dataset!)
+        // (we don't need the inverse for our dataset!, the project simply
+        // relies on the set of moves)
         Moves2.push_back(
             {row, row + 1, 1,
              float(-NewDummy[row][column]) / float(NewDummy[row + 1][column])});
@@ -177,6 +211,7 @@ void generatelooserdataset(std::vector<std::vector<int>> NewDummy) {
   }
   // Moves is filled with entries of the form {row1, row2, constant1,
   // constant2}, which we will use to train our model!
+  // below just outputs everything to a bufferfile
   std::ofstream bufferfile;
   bufferfile.open("dataset.txt");
   for (auto& entry : NewDummy) {
@@ -214,7 +249,7 @@ void generatelooserdataset(std::vector<std::vector<int>> NewDummy) {
 }
 
 int scoringalg(std::vector<std::vector<float>> Dummy) {
-  // We will score this matrix
+  // We will score this matrix using a linear scoring polynomial
   int score = 0;
   for (int i = 0; i < Dummy.size(); i++) {
     for (int j = 0; j < Dummy.size(); j++) {
@@ -240,6 +275,7 @@ std::vector<float> minimax(std::vector<std::vector<float>> Dummy, int min,
   // of constants we can use is {a,a+1,...,b,1/a,1/(a+1),...,1/b}. So there are
   // 2*(b-a+1) branches from each node of the tree. The tree ends once n^2
   // levels have been completed (Dummy is n x n)
+  // this is a naive implementation of the minimax algorithm
   std::vector<float> Constants;
   for (int i = min; i <= max; i++) {
     Constants.push_back(float(i));
@@ -284,36 +320,38 @@ std::vector<float> minimax(std::vector<std::vector<float>> Dummy, int min,
   }
 }
 int main() {
-  std::vector<std::vector<int>> A = {{1, 2}, {3, 4}};
+  // Everything in int main() is simply testing the functions
+  /* std::vector<std::vector<int>> A = {{1, 2}, {3, 4}};
 
-  std::vector<std::vector<int>> B = add(A[0], A[1], A, 0, 1, 1);
-  for (auto& entry : B) {
-    std::cout << entry[0] << " " << entry[1] << std::endl;
-  }
+   std::vector<std::vector<int>> B = add(A[0], A[1], A, 0, 1, 1);
+   for (auto& entry : B) {
+     std::cout << entry[0] << " " << entry[1] << std::endl;
+   }
 
-  std::vector<std::vector<int>> K;
-  create_identity_matrix(K, 2);
+   std::vector<std::vector<int>> K;
+   create_identity_matrix(K, 2);
 
-  std::vector<std::vector<int>> Bfinal = add(K[0], K[1], K, 0, 1, 1);
-  for (auto& entry : Bfinal) {
-    std::cout << entry[0] << " " << entry[1] << std::endl;
-  }
+   std::vector<std::vector<int>> Bfinal = add(K[0], K[1], K, 0, 1, 1);
+   for (auto& entry : Bfinal) {
+     std::cout << entry[0] << " " << entry[1] << std::endl;
+   }
 
-  bool value = TestIfIdentity(B);
-  bool value2 = TestIfIdentity(Bfinal);
-  std::cout << value << " " << value2 << std::endl;
+   bool value = TestIfIdentity(B);
+   bool value2 = TestIfIdentity(Bfinal);
+   std::cout << value << " " << value2 << std::endl;
 
-  // Everything in the main section is testing the program on a random scenario.
+   // Everything in the main section is testing the program on a random
+   scenario.
 
-  // recursionfordataset(5, Dummy); Removed because it is too bashy
-  // Call new function on this
-  for (int a = 1; a < 10; a++) {
-    for (int b = 1; b < 10; b++) {
-      for (int c = 1; c < 10; c++) {
-        for (int d = 1; d < 10; d++) {
-          generatelooserdataset({{a, b}, {c, d}});
-        }
-      }
-    }
-  }
+   // recursionfordataset(5, Dummy); Removed because it is too bashy
+   // Call new function on this
+   for (int a = 1; a < 10; a++) {
+     for (int b = 1; b < 10; b++) {
+       for (int c = 1; c < 10; c++) {
+         for (int d = 1; d < 10; d++) {
+           generatelooserdataset({{a, b}, {c, d}});
+         }
+       }
+     }
+   }*/
 }
