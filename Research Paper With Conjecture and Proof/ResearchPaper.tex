@@ -1,7 +1,7 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
 
-\title{On the Use of a Machine Learning (ML) Model to Improve the Time Complexity of Finding the Inverse of a Square Matrix With Gauss-Jordan Elimination}
+\title{On the Use of a Machine Learning (ML) Model to Improve the Time Complexity of Gaussian Move Extraction on a Square Matrix for Inversion}
 \author{Anay Aggarwal}
 \date{Stoller MS}
 
@@ -52,7 +52,7 @@
 \fancyhf{}
 \rhead{Page \thepage}
 \lhead{ML FOR GAUSS-JORDAN ELIMINATION}
-\title{{\large On the Use of a Machine Learning (ML) Model to Improve the Time Complexity of Finding the Inverse of a Square Matrix With Gauss-Jordan Elimination}}
+\title{{\large On the Use of a Machine Learning (ML) Model to Improve the Time Complexity of Gaussian Move Extraction on a Square Matrix for Inversion}}
 \author{Anay Aggarwal}
 \date{Stoller MS}
 \renewcommand{\baselinestretch}{2.0}
@@ -63,7 +63,7 @@
 \newpage
 \thispagestyle{fancy}
 \section*{Abstract}
-In Linear Algebra, it has been understood that Gaussian Elimination is by far the fastest way to manually invert a matrix. However, there is no efficient implementation for this process in software, because it is not systematic -- it requires intuition. The applications of matrix inversion (in cryptography, computer graphics, and machine learning) require it to be implemented in software, so this is a problem. In this project, an efficient implementation of Gauss Jordan Elimination in software was created to address this deficiency. Gaussian Elimination defines a set of “moves” that can be performed, and the more optimized the sequence of moves is, the faster it is to invert the matrix. The current software implementations of Gaussian Elimination require approximately $n^3$ “moves”, as opposed to the approximate $n^2$ moves by hand. The current fastest non-Gaussian Elimination method for matrix inversion runs at around $O(n^{2.3})$. The first step was to implement matrices in code. Then, the Minimax algorithm was used to compute the fastest Gaussian Elimination process to find the inverse of each matrix in a data set. A pattern recognition algorithm was then applied to determine if the results followed an explicit formula. It turns out that it did, in fact, follow an explicit formula in the form of a piecewise function. This formula ran exactly $n^2$ moves, a great improvement from the previous $n^{2.3}$.
+In Linear Algebra, it has been understood that Gaussian Elimination is by far the fastest way to manually invert a matrix. However, there is no efficient implementation for this process in software, because it is not systematic -- it requires intuition. The applications of matrix inversion (in cryptography, computer graphics, and machine learning) require it to be implemented in software, so this is a problem. In this project, an efficient implementation of Gauss Jordan Elimination in software was created to address this deficiency. Gaussian Elimination defines a set of “moves” that can be performed, and the more optimized the sequence of moves is, the faster it is to invert the matrix. The current software implementations of Gaussian Elimination require approximately $n^3$ “moves”, as opposed to the approximate $n^2$ moves by hand. The current fastest non-Gaussian Elimination method for matrix inversion runs at around $O(n^{2.3})$. The first step was to implement matrices in code. Then, the Minimax algorithm was used to compute the fastest Gaussian Elimination process to find the inverse of each matrix in a data set. A pattern recognition algorithm was then applied to determine if the results followed an explicit formula. It turns out that it did, in fact, follow an explicit formula in the form of a piecewise function. This formula ran exactly $n^2$ moves, a great improvement from the previous $n^3$.
 \newpage
 \section*{Background}
 There are multiple ways to calculate the inverse of a square matrix. The first is simply guessing and checking matrices, which is very inefficient. The second involves cofactors, adjugates, and determinants. This is also quite inefficient, but it can be done systemically. By hand, the method that is regarded as the most efficient is the Gauss-Jordan elimination method. However, the Gauss-Jordan method is difficult to implement in code because it requires intuition. Luckily, we have Machine Learning for that. Inverses of matrices can be used to solve systems of equations.  Matrix inversion also plays an important role in Computer Graphics and cryptography.
@@ -128,7 +128,7 @@ This design is incredibly fast and is a novel idea. It’s also tricky to implem
 The 2nd design has proven to be more worthy. This is because it will easily meet my criteria, and Minimax doesn’t require multiple processors, so one of the constraints can be dealt with. The other one is harder, but I figured out a way to use Minimax without upgrading to a later version of C++ (although this method is very hard to program in). For the other design, it will take a long time to process the algorithm itself, and the finished product may not even meet the criteria, which is why I chose the second design. 
 \\ \\
 Minimax is a widely-used ML model in Game Theory. It is specifically prominent in Chess AI's (Winston, 2010). It is a tree-search algorithm. The essential idea is that it can look through a few nodes of a tree and decide to only search the most promising branches sprouting from that node. These branches are chosen using a scoring algorithm (which can be found in my code under the "scoringalg" function), a linear scoring polynomial on the nodes. The major innovation here is that I was able to represent inverting a matrix as a game with a game tree. Below is said tree.
-\begin{center}\includegraphics[scale=0.4]{Minimax Visualization.png}\end{center}
+\begin{center}\includegraphics[scale=0.6]{Minimax.png}\end{center}
 \section*{Procedure}
 \begin{enumerate}
 \item Implement matrices in C++
@@ -149,6 +149,7 @@ https://github.com/Mathemagician123/RowReductionProject
 Completed algorithm:
 \begin{lstlisting}[language=C++]
 #include <math.h>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -158,15 +159,12 @@ Completed algorithm:
 #include <vector>
 
 /*
- ROW OPERATION INSTRUCTIONS
+ INSTRUCTIONS
  ------------
- Construct a Matrix A. Given this matrix, find all the given parameters needed
- for the add function (see comment under the function). For the altered matrix,
- call it A', run the add function with said parameters. Then run the same
- add function, except with Identity(K,A.size()), where K is a dummy matrix. (For
- reference, the 'matrices' we are using are essentially a vector of a vector)
- Assign that to some matrix I (keep this as your identity). Then you're done
- with a row operation!
+ Construct a Matrix A via a vector of a vector. Run the "generatelooserdataset"
+ algorithm that will run the algorithmic pattern found by minimax. This will
+ compute the row operations required to invert the matrix. You can manually
+ throw these onto the matrix.
  */
 
 using Matrix_entry = std::pair<int, int>;  // This is for 2x2 matrix
@@ -177,7 +175,7 @@ Matrix Moves;          // Vector of moves, used in recursion for dataset
 
 void MultiplyVectorByScalar(std::vector<int>& entry, int k) {
   for (int i = 0; i < entry.size(); i++) {
-    entry[i] *= k;
+    entry[i] *= k;  // the intuitive method
   }
 }
 
@@ -185,7 +183,7 @@ void create_identity_matrix(std::vector<std::vector<int>>& I, int n) {
   // Create n x n identity matrix
   I = std::vector<std::vector<int>>(n, std::vector<int>(n, 0));
   for (unsigned int t = 0; t < n; t++) {
-    I[t][t] = 1;
+    I[t][t] = 1;  // switching all diagonal elements to 1
   }
 }
 
@@ -199,7 +197,7 @@ std::vector<std::vector<int>> add(std::vector<int> R1, std::vector<int> R2,
   }
   A.erase(A.begin() + index);       // Taking away old R1
   A.insert(A.begin() + index, R1);  // Adding new R1
-  return A;
+  return A;  // returning the matrix after a single row operation
 }
 
 bool test_if_identity(Matrix& input) {
@@ -209,6 +207,38 @@ bool test_if_identity(Matrix& input) {
     return true;
   }
   return false;
+}
+
+int determinant(int matrix[10][10], int n) {
+  int det = 0;  // simply expansion by minors
+  int submatrix[10][10];
+  if (n == 2)
+    return ((matrix[0][0] * matrix[1][1]) - (matrix[1][0] * matrix[0][1]));
+  else {
+    for (int x = 0; x < n; x++) {
+      int subi = 0;
+      for (int i = 1; i < n; i++) {
+        int subj = 0;
+        for (int j = 0; j < n; j++) {
+          if (j == x)
+            continue;
+          submatrix[subi][subj] = matrix[i][j];
+          subj++;
+        }
+        subi++;
+      }
+      det = det + (pow(-1, x) * matrix[0][x] * determinant(submatrix, n - 1));
+    }
+  }
+  return det;
+}
+// src:
+// https://www.tutorialspoint.com/cplusplus-program-to-compute-determinant-of-a-matrix
+
+bool isinvertible(int matrix[10][10], int n) {
+  return (determinant == 0)
+             ? true
+             : false;  // det = 0? if yes, its invertible, otherwise, it's not
 }
 
 bool TestIfIdentity(std::vector<std::vector<int>> I) {
@@ -236,7 +266,11 @@ bool TestIfIdentity(std::vector<std::vector<int>> I) {
   }
 }
 
-void recursionfordataset(int range, Matrix& Dummy) {
+void recursionfordataset(
+    int range,
+    Matrix& Dummy) {  // brute-force method to look down the game tree; this
+                      // will compute a small dataset for minimax to work with -
+                      // takes a while to go through
   if (counter == 0) {
     std::cout << "counter is zero\n";
     if (test_if_identity(Dummy) == true) {
@@ -302,7 +336,8 @@ void generatelooserdataset(std::vector<std::vector<int>> NewDummy) {
         // I = add(
         //  I[row], I[row + 1], I, row, 1,
         // float(-NewDummy[row][column]) / float(NewDummy[row + 1][column]));
-        // (we don't need the inverse for our dataset!)
+        // (we don't need the inverse for our dataset!, the project simply
+        // relies on the set of moves)
         Moves2.push_back(
             {row, row + 1, 1,
              float(-NewDummy[row][column]) / float(NewDummy[row + 1][column])});
@@ -326,6 +361,7 @@ void generatelooserdataset(std::vector<std::vector<int>> NewDummy) {
   }
   // Moves is filled with entries of the form {row1, row2, constant1,
   // constant2}, which we will use to train our model!
+  // below just outputs everything to a bufferfile
   std::ofstream bufferfile;
   bufferfile.open("dataset.txt");
   for (auto& entry : NewDummy) {
@@ -363,7 +399,7 @@ void generatelooserdataset(std::vector<std::vector<int>> NewDummy) {
 }
 
 int scoringalg(std::vector<std::vector<float>> Dummy) {
-  // We will score this matrix
+  // We will score this matrix using a linear scoring polynomial
   int score = 0;
   for (int i = 0; i < Dummy.size(); i++) {
     for (int j = 0; j < Dummy.size(); j++) {
@@ -389,6 +425,7 @@ std::vector<float> minimax(std::vector<std::vector<float>> Dummy, int min,
   // of constants we can use is {a,a+1,...,b,1/a,1/(a+1),...,1/b}. So there are
   // 2*(b-a+1) branches from each node of the tree. The tree ends once n^2
   // levels have been completed (Dummy is n x n)
+  // this is a naive implementation of the minimax algorithm
   std::vector<float> Constants;
   for (int i = min; i <= max; i++) {
     Constants.push_back(float(i));
@@ -433,38 +470,40 @@ std::vector<float> minimax(std::vector<std::vector<float>> Dummy, int min,
   }
 }
 int main() {
-  std::vector<std::vector<int>> A = {{1, 2}, {3, 4}};
+  // Everything in int main() is simply testing the functions
+  /* std::vector<std::vector<int>> A = {{1, 2}, {3, 4}};
 
-  std::vector<std::vector<int>> B = add(A[0], A[1], A, 0, 1, 1);
-  for (auto& entry : B) {
-    std::cout << entry[0] << " " << entry[1] << std::endl;
-  }
+   std::vector<std::vector<int>> B = add(A[0], A[1], A, 0, 1, 1);
+   for (auto& entry : B) {
+     std::cout << entry[0] << " " << entry[1] << std::endl;
+   }
 
-  std::vector<std::vector<int>> K;
-  create_identity_matrix(K, 2);
+   std::vector<std::vector<int>> K;
+   create_identity_matrix(K, 2);
 
-  std::vector<std::vector<int>> Bfinal = add(K[0], K[1], K, 0, 1, 1);
-  for (auto& entry : Bfinal) {
-    std::cout << entry[0] << " " << entry[1] << std::endl;
-  }
+   std::vector<std::vector<int>> Bfinal = add(K[0], K[1], K, 0, 1, 1);
+   for (auto& entry : Bfinal) {
+     std::cout << entry[0] << " " << entry[1] << std::endl;
+   }
 
-  bool value = TestIfIdentity(B);
-  bool value2 = TestIfIdentity(Bfinal);
-  std::cout << value << " " << value2 << std::endl;
+   bool value = TestIfIdentity(B);
+   bool value2 = TestIfIdentity(Bfinal);
+   std::cout << value << " " << value2 << std::endl;
 
-  // Everything in the main section is testing the program on a random scenario.
+   // Everything in the main section is testing the program on a random
+   scenario.
 
-  // recursionfordataset(5, Dummy); Removed because it is too bashy
-  // Call new function on this
-  for (int a = 1; a < 10; a++) {
-    for (int b = 1; b < 10; b++) {
-      for (int c = 1; c < 10; c++) {
-        for (int d = 1; d < 10; d++) {
-          generatelooserdataset({{a, b}, {c, d}});
-        }
-      }
-    }
-  }
+   // recursionfordataset(5, Dummy); Removed because it is too bashy
+   // Call new function on this
+   for (int a = 1; a < 10; a++) {
+     for (int b = 1; b < 10; b++) {
+       for (int c = 1; c < 10; c++) {
+         for (int d = 1; d < 10; d++) {
+           generatelooserdataset({{a, b}, {c, d}});
+         }
+       }
+     }
+   }*/
 }
 \end{lstlisting}
 We shall now delve into the mathematical aspect of this algorithm. \\ \\
@@ -532,7 +571,7 @@ The algorithm found by minimax can generate the Gaussian Elimination moves requi
 \end{enumerate}
 
 \section*{Future Goals}
-I plan to take this project to the next level by replacing the systematic algorithm that I developed in this project for an algorithm that is more reliant on artificial intelligence and leverages neural networks to improve the runtime even more. Currently, my program inputs a matrix $\mathbb{A}\in \mathbb{Q}^2$, but cannot do $\mathbb{A}\in \overline{\mathbb{Q}}^2$ or $\mathbb{A}\in (\mathbb{C}\backslash \mathbb{R})^2$. I plan on implementing a framework in C++ for matrices with irrational or complex numbers. As for small tweaks, I plan on tidying up the code to make it more readable, and less "all over the place".
+I plan to take this project to the next level by replacing the systematic algorithm that I developed in this project for an algorithm that is more reliant on artificial intelligence and leverages neural networks to improve the runtime even more. Currently, my program inputs a matrix $\mathbb{A}\in \mathbb{Q}^2$, but cannot do $\mathbb{A}\in \overline{\mathbb{Q}}^2$ or $\mathbb{A}\in (\mathbb{C}\backslash \mathbb{R})^2$. I plan on implementing a framework in C++ for matrices with irrational or complex numbers.  I also aim to implement the Gaussian moves to inverse conversion as quickly as possible, so my project can attack the broader topic of matrix inversion.
 \newpage
 \section*{References}
 \begin{enumerate}[leftmargin=!,labelindent=5pt,itemindent=-15pt]
